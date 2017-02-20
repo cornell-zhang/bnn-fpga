@@ -22,7 +22,7 @@
 //-------------------------------------------------------------------
 // Constants
 //-------------------------------------------------------------------
-const unsigned CONVOLVERS = 2;
+const unsigned CONVOLVERS = 8;
 
 const unsigned WORD_SIZE = 64;
 const unsigned WT_SIZE = 9;
@@ -38,8 +38,8 @@ const unsigned KH_WORDS     = WT_L/128*16 / WORD_SIZE;
 
 const unsigned DMEM_WORDS   = 128*32*32 / WORD_SIZE;
 const unsigned C_DMEM_WORDS = DMEM_WORDS / CONVOLVERS;
-const unsigned DMEM_O_WORDS = 512*4*4 / WORD_SIZE;
-const unsigned DB_MEM_WORDS = 32*32;
+const unsigned DMEM_I_WORDS = 32*32;
+const unsigned DMEM_O_WORDS = 8;
 
 const unsigned PIX_PER_PHASE = 2*32*32;
 
@@ -92,16 +92,13 @@ void load_kh(T& comp, const Word kh_mem[KH_WORDS], Address idx) {
 // Accelerator synthesizable top-level function
 //-------------------------------------------------------------------
 #pragma SDS data copy(dmem_i[0:input_words], dmem_o[0:output_words])
-#pragma SDS data access_pattern(dmem_i:SEQUENTIAL, dmem_o:SEQUENTIAL)
-#pragma SDS data access_pattern(wt_i:SEQUENTIAL, kh_i:SEQUENTIAL)
+#pragma SDS data access_pattern(dmem_i:SEQUENTIAL, dmem_o:SEQUENTIAL, wt_i:SEQUENTIAL)
 #pragma SDS data mem_attribute(dmem_i:PHYSICAL_CONTIGUOUS, dmem_o:PHYSICAL_CONTIGUOUS)
-#pragma SDS data mem_attribute(wt_i:PHYSICAL_CONTIGUOUS, kh_i:PHYSICAL_CONTIGUOUS)
-#pragma SDS data data_mover(dmem_i:AXIDMA_SIMPLE, dmem_o:AXIDMA_SIMPLE)
-#pragma SDS data data_mover(wt_i:AXIDMA_SIMPLE, kh_i:AXIDMA_SIMPLE)
+#pragma SDS data mem_attribute(wt_i:PHYSICAL_CONTIGUOUS)
+#pragma SDS data data_mover(dmem_i:AXIDMA_SIMPLE, dmem_o:AXIDMA_SIMPLE, wt_i:AXIDMA_SIMPLE)
 void top(
-    Word wt_i[WT_WORDS],
-    Word kh_i[KH_WORDS],
-    Word dmem_i[DMEM_WORDS],
+    Word wt_i[WT_WORDS+KH_WORDS],
+    Word dmem_i[DMEM_I_WORDS],
     Word dmem_o[DMEM_O_WORDS],
     const Address    n_inputs,
     const Address    n_outputs,

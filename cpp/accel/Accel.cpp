@@ -128,7 +128,7 @@ void process_word(
       line_buffer_m[bank][CONV_ROWS-1][CONV_COLS-1] = (last_wrd || rb[bank]) ? TwoBit(0) : word_buffer_m[s_idx][CONV_COLS-1];
     }
   }
-  
+
   DB(4,
     printf("Accel lbuf wrd%d before conv:\n", wrd.to_int());
     print_line_buffer_m(line_buffer_m);
@@ -136,7 +136,7 @@ void process_word(
 
   // Convolution
   conv_word( line_buffer_m, conv_params_m, conv_out_buffer_m );
-  
+
   // Update
   // Fill line buffer with lines from the new word
   for (ap_uint<4> bank = 0; bank < CONV_BANKS; ++bank) {
@@ -694,9 +694,8 @@ void bin_dense(
 // Accelerator top module
 // -----------------------------------------------------------------------
 void top(
-    Word wt_i[WT_WORDS],
-    Word kh_i[KH_WORDS],
-    Word dmem_i[DMEM_WORDS],
+    Word wt_i[WT_WORDS+KH_WORDS],
+    Word dmem_i[DMEM_I_WORDS],
     Word dmem_o[DMEM_O_WORDS],
     const Address    n_inputs,
     const Address    n_outputs,
@@ -743,36 +742,20 @@ void top(
   ap_uint<1> d_o_idx = ~dmem_mode;
 
   // Data input
-  const ap_uint<5> words_per_image = 1 << (2*width_mode);
-  Address img_idx = 0;  // i / words_per_image;
-  IdxType img_off = 0;  // i % words_per_image;
   LOOP_DMEM_I: for (Address i = 0; i < input_words; ++i) {
-    if (layer_type == LAYER_CONV) {
-      Address bank_idx = img_idx % CONVOLVERS;
-      Address bank_off = img_idx / CONVOLVERS;
-      dmem[d_i_idx][bank_idx][(bank_off<<(2*width_mode)) + img_off] = dmem_i[i];
-    }
-    else if (layer_type == LAYER_CONV1)
-      dmem[d_i_idx][i/C_DMEM_WORDS][i%C_DMEM_WORDS] = dmem_i[i];
-    else
-      dmem[d_i_idx][i%CONVOLVERS][i/CONVOLVERS] = dmem_i[i];
-
-    if (++img_off == words_per_image) {
-      img_off = 0;
-      ++img_idx;
-    }
+    dmem[d_i_idx][i/C_DMEM_WORDS][i%C_DMEM_WORDS] = dmem_i[i];
   }
 
   // Weight input, we must copy every 64-bit Word from the interface
   // into the accelerator
-  LOOP_WT_I: for (Address i = 0; i < C_WT_WORDS*CONVOLVERS; ++i) {
-    wt_mem[i%CONVOLVERS][i/CONVOLVERS] = wt_i[i];
+  LOOP_WT_I: for (Address i = 0; i < WT_WORDS+KH_WORDS; ++i) {
+    if (i < WT_WORDS)
+      wt_mem[i%CONVOLVERS][i/CONVOLVERS] = wt_i[i];
+    else
+      kh_mem[i-WT_WORDS] = wt_i[i];
   }
   //printf ("\nAccel Weights:\n");
   //print_params3d(wt_mem[0], 0, n_inputs*n_outputs);
-
-  LOOP_KH_I: for (ap_uint<16> i = 0; i < KH_WORDS; ++i)
-    kh_mem[i] = kh_i[i];
 
   if (layer_type == LAYER_CONV1) {
     assert(n_inputs == 3);
@@ -831,24 +814,7 @@ void top(
     o_index += n_outputs;
   } // layer_type
 
-  // Data output
-  ap_uint<5> words_per_out = words_per_image / ((norm_mode!=2) ? 1 : 4);
-  img_idx = 0;
-  img_off = 0;
   LOOP_DMEM_O: for (Address i = 0; i < output_words; ++i) {
-    // exclude conv6 (width==8, norm_mode==2) here because it writes
-    // the output fmaps linearly
-    if (layer_type <= LAYER_CONV && !(width_mode == 0 && norm_mode == 2)) {
-      Address bank_idx = img_idx % CONVOLVERS;
-      Address bank_off = img_idx / CONVOLVERS;
-      dmem_o[i] = dmem[d_o_idx][bank_idx][bank_off*words_per_out + img_off];
-    }
-    else
-      dmem_o[i] = dmem[d_o_idx][i%CONVOLVERS][i/CONVOLVERS];
-
-    if (++img_off == words_per_out) {
-      img_off = 0;
-      ++img_idx;
-    }
+    dmem_o[i] = dmem[d_o_idx][0][i];
   }
 }

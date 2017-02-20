@@ -245,7 +245,6 @@ void test_conv_layer(
       data_i, data_o,
       0,      // layer_idx
       input_words,
-      output_words,
       0,      // dmem_mode
       sched
   );
@@ -308,7 +307,6 @@ void test_dense_layer(
       data_i, data_o,
       0,      // layer_idx
       M/WORD_SIZE,
-      N/WORD_SIZE,
       0,      // dmem_mode
       sched
   );

@@ -20,12 +20,6 @@ int main(int argc, char** argv) {
 
   const unsigned lconv  = 6;  // last conv
   const unsigned ldense = 8;  // last dense
-  const bool DENSE_LAYER_CPU = getenv("BNN_DENSE_LAYER_CPU") != NULL;
-  const bool LAST_LAYER_CPU = getenv("BNN_LAST_LAYER_CPU") != NULL;
-  if (DENSE_LAYER_CPU)
-    printf ("## Dense layer CPU is turned on ##\n");
-  if (LAST_LAYER_CPU)
-    printf ("## Last layer CPU is turned on ##\n");
 
   // print some config numbers
   printf ("* WT_WORDS   = %u\n", WT_WORDS);
@@ -74,7 +68,7 @@ int main(int argc, char** argv) {
   }
 
   // allocate memories for data i/o for the accelerator
-  Word* data_i  = (Word*) MEM_ALLOC( DMEM_WORDS * sizeof(Word) );
+  Word* data_i  = (Word*) MEM_ALLOC( DMEM_I_WORDS * sizeof(Word) );
   Word* data_o  = (Word*) MEM_ALLOC( DMEM_O_WORDS * sizeof(Word) );
   if (!data_i || !data_o) {
     fprintf (stderr, "**** ERROR: Alloc failed in %s\n", __FILE__);
@@ -100,13 +94,11 @@ int main(int argc, char** argv) {
       const unsigned N = N_tab[l-1];
       const unsigned S = S_tab[l-1];
       unsigned input_words = (l==1) ? S*S : M*S*S/WORD_SIZE;
-      unsigned output_words = (pool_tab[l-1]) ? N*S*S/WORD_SIZE/4 : N*S*S/WORD_SIZE;
 
       run_accel_schedule(
           data_i, data_o,
           l-1,        // layer_idx
           (l==1) ? input_words : 0,
-          (l==lconv && DENSE_LAYER_CPU) ? output_words : 0,
           l % 2,      // mem_mode
           layer_sched[l-1]
       );
@@ -119,51 +111,32 @@ int main(int argc, char** argv) {
       const unsigned M = M_tab[l-1];
       const unsigned N = N_tab[l-1];
 
-      if (DENSE_LAYER_CPU) {
-        for (unsigned i = 0; i < M/WORD_SIZE; ++i)
-          data_i[i] = data_o[i];
+      run_accel_schedule(
+          data_i, data_o,
+          l-1,
+          0,      // input_words
+          l % 2,  // mem_mode
+          layer_sched[l-1]
+      );
 
-        dense_layer_cpu(
-            wt[l-1], params.float_data(3*l-2), params.float_data(3*l-1),
-            data_i, data_o, M, N
-        );
-
-      } else {
-        run_accel_schedule(
-            data_i, data_o,
-            l-1,
-            0,    // input_words
-            (l==ldense && LAST_LAYER_CPU) ? 1024/WORD_SIZE : 0,
-            l % 2,
-            layer_sched[l-1]
-        );
-      }
     }
 
     //------------------------------------------------------------
     // Execute last layer
     //------------------------------------------------------------
     int prediction = -1;
-    if (DENSE_LAYER_CPU || LAST_LAYER_CPU) {
-      prediction = last_layer_cpu(
-          wt[ldense],
-          params.float_data(kidx_tab[ldense]),
-          params.float_data(hidx_tab[ldense]),
-          data_o,
-          M_tab[ldense], N_tab[ldense]
-      );
-    } else {
-      run_accel_schedule(
-          data_i, data_o,
-          ldense,
-          0, 1,
-          1,
-          layer_sched[ldense]
-      );
-      ap_int<8> p = 0;
-      p(7,0) = data_o[0](7,0);
-      prediction = p.to_int();
-    }
+
+    run_accel_schedule(
+        data_i, data_o,
+        ldense,
+        0,      // input_words
+        1,      // mem_mode
+        layer_sched[ldense]
+    );
+
+    ap_int<8> p = 0;
+    p(7,0) = data_o[0](7,0);
+    prediction = p.to_int();
 
     //assert(prediction >= 0 && prediction <= 9);
     int label = y.data[n];

@@ -80,7 +80,7 @@ void compute_accel_schedule(
     else
       load_dense_weights(wt, wt_i, o, n_inputs, imgs_per_batch);
     // divide up the kh params
-    Word* kh_i = schedule[idx].kh;
+    Word* kh_i = schedule[idx].wt+WT_WORDS;
     if (layer_type != LAYER_LAST)
       load_kh (kh, kh_i, o, imgs_per_batch);
     else
@@ -96,14 +96,12 @@ void run_accel_schedule(
     Word* data_o,
     unsigned layer_idx,
     unsigned input_words,
-    unsigned output_words,
     ap_uint<1> dmem_mode,
     AccelSchedule& s
 ) {
   // weight mems
-  static Word* wt_i = (Word*) MEM_ALLOC( WT_WORDS*sizeof(Word) );
-  static Word* kh_i = (Word*) MEM_ALLOC( KH_WORDS*sizeof(Word) );
-  if (!wt_i || !kh_i) {
+  static Word* wt_i = (Word*) MEM_ALLOC( (WT_WORDS+KH_WORDS)*sizeof(Word) );
+  if (!wt_i) {
     fprintf(stderr, "**** ERROR: Alloc wt_i or kh_i failed in %s\n", __FILE__);
     exit(-2);
   }
@@ -113,18 +111,16 @@ void run_accel_schedule(
 
   // Invoke accelerator once for each element in the schedule
   for (unsigned i = 0; i < N; ++i) {
-    for (unsigned j = 0; j < WT_WORDS; ++j)
+    for (unsigned j = 0; j < WT_WORDS+KH_WORDS; ++j)
       wt_i[j] = s[i].wt[j];
-    for (unsigned j = 0; j < KH_WORDS; ++j)
-      kh_i[j] = s[i].kh[j];
 
     timers[LAYERS-1-layer_idx].start();
 
     top(
-        wt_i, kh_i, data_i, data_o,
+        wt_i, data_i, data_o,
         s[i].n_inputs, s[i].n_outputs,
         (i==0)   ? input_words : 0,
-        (i==N-1) ? output_words : 0,
+        (i==N-1) ? 1 : 0,
         s[i].layer_mode,
         dmem_mode,
         s[i].width_mode,
@@ -135,7 +131,6 @@ void run_accel_schedule(
   }
 
   //MEM_FREE( wt_i );
-  //MEM_FREE( kh_i );
 }
 
 // -----------------------------------------------------------------------

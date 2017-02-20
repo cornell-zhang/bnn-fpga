@@ -4,11 +4,10 @@
 #include <vector>
 #include "Accel.h"
 
-// Contains all info needed to invoke the accelerator once except
+// Contains all info needed to invoke the accelerator once except 
 // input/output data and its size which is handled separately
 struct AccelInfo {
   Word* wt;
-  Word* kh;
   unsigned n_inputs;
   unsigned n_outputs;
   ap_uint<3> layer_mode;  // [0]='new layer', [2:1]='conv1,conv,dense'
@@ -16,13 +15,11 @@ struct AccelInfo {
   ap_uint<2> norm_mode;   // 0='do nothing', 1='do norm', 2='do pool'
 
   AccelInfo() {
-    wt = new Word[WT_WORDS];
-    kh = new Word[KH_WORDS];
+    wt = new Word[WT_WORDS+KH_WORDS];
   }
 
   ~AccelInfo() {
     delete[] wt;
-    delete[] kh;
   }
 };
 
@@ -44,7 +41,6 @@ void run_accel_schedule(
     Word* data_o,
     unsigned layer_idx,
     unsigned input_words,
-    unsigned output_words,
     ap_uint<1> dmem_mode,
     AccelSchedule& s
 );
