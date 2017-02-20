@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
 
   // Load parameters
   printf ("## Loading parameters ##\n");
-  Params params(get_root_dir() + "/params/cifar10_parameters_nb.zip");
+  Params params(get_root_dir() + "/params/cifar10_parameters_nb_conv1x1.zip");
 
   // ---------------------------------------------------------------------
   // allocate and binarize all weights

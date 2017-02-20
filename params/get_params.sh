@@ -4,7 +4,7 @@ CURR_DIR=`pwd`
 DIR="$( cd "$( dirname "${BASH_ROUCE[0]}" )" && pwd )"
 cd $DIR
 
-declare -a files=("cifar10_parameters_nb.zip" "cifar10_parameters_nb.npz")
+declare -a files=("cifar10_parameters_nb_conv1x1.zip")
 
 for i in "${files[@]}" ; do
   if [ -f $i ] ; then
