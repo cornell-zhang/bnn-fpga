@@ -1,0 +1,10 @@
+*~
+*.pyc
+*.npz
+*.zip
+*.o
+*.a
+*.exe
+
+*.prj
+vivado_hls.log
