@@ -18,10 +18,27 @@ bool layer_is_fpconv(unsigned layer_idx) {
   assert(layer_idx != 0 && layer_idx <= N_LAYERS);
   return T_tab[layer_idx-1] == LAYER_CONV1;
 }
+bool layer_is_dense(unsigned layer_idx) {
+  assert(layer_idx != 0 && layer_idx <= N_LAYERS);
+  return T_tab[layer_idx-1] == LAYER_DENSE;
+}
 bool layer_is_last(unsigned layer_idx) {
   assert(layer_idx != 0 && layer_idx <= N_LAYERS);
   return T_tab[layer_idx-1] == LAYER_LAST;
 }
+bool layer_is_conv1x1(unsigned layer_idx) {
+  assert(layer_idx != 0 && layer_idx <= N_LAYERS);
+  return T_tab[layer_idx-1] == LAYER_CONV1X1;
+}
+bool layer_is_last_conv1x1(unsigned layer_idx) {
+  assert(layer_idx != 0 && layer_idx <= N_LAYERS);
+  return T_tab[layer_idx-1] == LAYER_CONV1X1_LAST;
+}
+bool layer_is_final_conv1x1(unsigned layer_idx) {
+  assert(layer_idx != 0 && layer_idx <= N_LAYERS);
+  return T_tab[layer_idx-1] == LAYER_CONV1X1_FINAL;
+}
+
 bool layer_wt_size(unsigned layer_idx);
 bool layer_kh_size(unsigned layer_idx);
 
@@ -52,8 +69,10 @@ void set_weight_array(Word* w, const float* wts, unsigned layer_idx) {
 
   if (layer_is_conv(layer_idx)) {
     set_conv_weight_array(w, wts, M*N);
-  } else {
+  } else if (layer_is_dense(layer_idx) || layer_is_last(layer_idx)){
     set_dense_weight_array(w, wts, M, N);
+  } else {
+    set_conv1x1_weight_array(w, wts, M, N);
   }
 }
 
@@ -84,6 +103,22 @@ void set_dense_weight_array(Word* w, const float* wts, unsigned M, unsigned N) {
   }
 }
 
+void set_conv1x1_weight_array(Word* w, const float* wts, const unsigned M, const unsigned N) {
+  unsigned w_idx = 0;
+
+  for (unsigned n = 0; n < N; ++n) {
+    for (unsigned m = 0; m < M; m+=WORD_SIZE) {
+      Word wrd = 0;
+      for (unsigned b = 0; b < WORD_SIZE; ++b) {
+        wrd[b] = ((wts[n*M+m+b] < 0) ? 1 : 0);
+      }
+      w[w_idx] = wrd;
+      ++w_idx;
+    }
+  }
+}
+
+
 //------------------------------------------------------------------------
 // Binarize and pack the batch norm parameters
 //------------------------------------------------------------------------
@@ -103,9 +138,12 @@ float compute_thresh(const float k, const float h) {
 
 void set_bnorm_array(Word* kh, const float* k, const float* h, unsigned layer_idx) {
   const unsigned N = N_tab[layer_idx-1];
-  if (!layer_is_last(layer_idx)) {
+  if (!layer_is_last(layer_idx) && !layer_is_final_conv1x1(layer_idx)) {
     set_bnorm_array1(kh, k, h, layer_idx, N);
+  } else if (layer_is_final_conv1x1(layer_idx)) {
+    set_last_conv1x1_bnorm_array(kh, k, h, N);
   } else {
+    printf("here\n");
     set_bnorm_array2(kh, k, h, N);
   }
 }
@@ -143,6 +181,18 @@ void set_bnorm_array2(Word* kh, const float* k, const float* h, unsigned N) {
       w(63,48) = hi(15,0);
     }
     kh[n/2] = w;
+  }
+}
+
+void set_last_conv1x1_bnorm_array(Word* kh, const float* k, const float* h, unsigned N) {
+  for (unsigned n = 0; n < N; n++) {
+    KType ki = k[n];
+    HType hi = h[n];
+
+    for (unsigned i = 0; i < 16; i++) {
+      set_bit(kh, n*32+i, ki[i]);
+      set_bit(kh, n*32+16+i, hi[i]);
+    }
   }
 }
 
@@ -245,7 +295,6 @@ void test_conv_layer(
       data_i, data_o,
       0,      // layer_idx
       input_words,
-      output_words,
       0,      // dmem_mode
       sched
   );
@@ -299,7 +348,7 @@ void test_dense_layer(
   compute_accel_schedule(
       weights, kh,
       M, N, 1,
-      2,      // layer_mode
+      (ap_uint<3>)2,      // layer_mode
       0,      // norm_mode
       sched
   );
@@ -308,7 +357,6 @@ void test_dense_layer(
       data_i, data_o,
       0,      // layer_idx
       M/WORD_SIZE,
-      N/WORD_SIZE,
       0,      // dmem_mode
       sched
   );

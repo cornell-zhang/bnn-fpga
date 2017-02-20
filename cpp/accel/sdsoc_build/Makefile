@@ -1,7 +1,7 @@
 include ../../Makefile.inc
 
 CFLAGS:=-DHLS_COMPILE -I../../utils $(CFLAGS)
-SLDFLAGS:=-DHLS_COMPILE -L. -lSdsCraftUtils -L./libhf_minizip -lminizip -laes -lz
+SLDFLAGS:=-DHLS_COMPILE -L. -lSdsCraftUtils -L./libhf_minizip -lminizip -laes -lz -lrt
 
 SDSFLAGS=-sds-pf zed -dmclkid 1 -sds-hw top Accel.cpp -clkid 1 -hls-tcl sds.tcl -sds-end
 CXX=sds++ $(SDSFLAGS)
@@ -9,7 +9,7 @@ CXX=sds++ $(SDSFLAGS)
 # HDR are pure headers
 HDR=
 # OBJ must include a .cpp and .h with same name
-UTILS=Common.o Timer.o DataIO.o ParamIO.o ZipIO.o
+UTILS=Common.o DataIO.o ParamIO.o ZipIO.o
 LIBUTILS=libSdsCraftUtils.a
 OBJ=Accel.o AccelSchedule.o AccelTest.o AccelPrint.o Dense.o InputConv.o
 EXE=accel_test_bnn.exe
@@ -36,5 +36,5 @@ $(EXE): %.exe: %.o $(OBJ) $(LIBUTILS)
 
 .PHONY: clean
 clean:
-	rm -f *.o *.exe *.bit
+	rm -f *.o *.exe *.bit *.a
 	rm -rf _sds sd_card

@@ -2,7 +2,8 @@
 #include "AccelTest.h"
 #include "Timer.h"
 
-static Timer timers[N_LAYERS] = {
+static Timer t_wts("wt move");
+static Timer timers[] = {
   "xl-FC3",
   "xl-FC2",
   "xl-FC1",
@@ -31,15 +32,15 @@ void compute_accel_schedule(
     unsigned n_inputs,
     unsigned n_outputs,
     unsigned width,
-    const ap_uint<2> layer_type,  // 0=conv1, 1=conv, 2=dense
-    const ap_uint<1> max_pool,
+    const ap_uint<3> layer_type,  // 0=conv1, 1=conv, 2=dense
+    const ap_uint<2> max_pool,
     AccelSchedule &schedule
 ) {
   assert (wt != NULL);
   assert (kh != NULL);
-  const ap_uint<2> width_mode = width >> 4;
-  ap_uint<3> layer_mode = 0;
-  layer_mode(2,1) = layer_type(1,0);
+  const ap_uint<2> width_mode = (width==8) ? 0 : (width==16) ? 1 : 2;
+  ap_uint<4> layer_mode = 0;
+  layer_mode(3,1) = layer_type(2,0);
 
   // for conv layers
   unsigned width_o = (max_pool==0) ? width : width / 2;
@@ -49,7 +50,7 @@ void compute_accel_schedule(
     imgs_per_batch = find_conv_batch_size(width, width_o, n_inputs, n_outputs);
 
   // recalculate some values if dense layer
-  if (layer_type == LAYER_DENSE || layer_type == LAYER_LAST) {
+  else {
     width_o = 1;
     imgs_per_batch = find_dense_batch_size(n_inputs, n_outputs);
   }
@@ -77,12 +78,17 @@ void compute_accel_schedule(
       load_conv1_weights(wt, wt_i, o, imgs_per_batch);
     else if (layer_type == LAYER_CONV)
       load_conv_weights(wt, wt_i, o, n_inputs, imgs_per_batch);
-    else
+    else {
       load_dense_weights(wt, wt_i, o, n_inputs, imgs_per_batch);
+      //for(int i = 0; i < 8; i++) printf("%2d ", wt[1][i] == 1 ? -1 : 1);
+      //printf("\n");
+    }
     // divide up the kh params
-    Word* kh_i = schedule[idx].kh;
-    if (layer_type != LAYER_LAST)
+    Word* kh_i = schedule[idx].wt+WT_WORDS;
+    if (layer_type != LAYER_LAST && layer_type != LAYER_CONV1X1_FINAL)
       load_kh (kh, kh_i, o, imgs_per_batch);
+    else if (layer_type == LAYER_CONV1X1_FINAL)
+      load_last_kh (kh, kh_i, o, imgs_per_batch);
     else
       load_kh (kh, kh_i, o, 2*imgs_per_batch);
   }
@@ -96,35 +102,33 @@ void run_accel_schedule(
     Word* data_o,
     unsigned layer_idx,
     unsigned input_words,
-    unsigned output_words,
     ap_uint<1> dmem_mode,
     AccelSchedule& s
 ) {
   // weight mems
-  static Word* wt_i = (Word*) MEM_ALLOC( WT_WORDS*sizeof(Word) );
-  static Word* kh_i = (Word*) MEM_ALLOC( KH_WORDS*sizeof(Word) );
-  if (!wt_i || !kh_i) {
+  static Word* wt_i = (Word*) MEM_ALLOC( (WT_WORDS+KH_WORDS)*sizeof(Word) );
+  if (!wt_i) {
     fprintf(stderr, "**** ERROR: Alloc wt_i or kh_i failed in %s\n", __FILE__);
     exit(-2);
   }
 
   const unsigned N = s.size();
   const unsigned LAYERS = 9;
-
+ 
   // Invoke accelerator once for each element in the schedule
   for (unsigned i = 0; i < N; ++i) {
-    for (unsigned j = 0; j < WT_WORDS; ++j)
+    t_wts.start();
+    for (unsigned j = 0; j < WT_WORDS+KH_WORDS; ++j)
       wt_i[j] = s[i].wt[j];
-    for (unsigned j = 0; j < KH_WORDS; ++j)
-      kh_i[j] = s[i].kh[j];
+    t_wts.stop();
 
     timers[LAYERS-1-layer_idx].start();
 
     top(
-        wt_i, kh_i, data_i, data_o,
+        wt_i, data_i, data_o,
         s[i].n_inputs, s[i].n_outputs,
         (i==0)   ? input_words : 0,
-        (i==N-1) ? output_words : 0,
+        (i==N-1) ? 1 : 0,
         s[i].layer_mode,
         dmem_mode,
         s[i].width_mode,
@@ -135,7 +139,6 @@ void run_accel_schedule(
   }
 
   //MEM_FREE( wt_i );
-  //MEM_FREE( kh_i );
 }
 
 // -----------------------------------------------------------------------
@@ -298,10 +301,10 @@ void load_kh(Word* kh, Word kh_i[], unsigned o, unsigned n_out) {
   }
 }
 
-float total_time() {
-  float t = 0;
-  for (unsigned n = 0; n < N_LAYERS; ++n) {
-    t += timers[n].get_time();
+void load_last_kh(Word* kh, Word kh_i[], unsigned o, unsigned n_out) {
+  unsigned kh_addr = o / 2;
+  for (unsigned i = 0; i*2 < n_out; ++i) {
+    kh_i[i] = kh[kh_addr + i];
   }
-  return t;
 }
+

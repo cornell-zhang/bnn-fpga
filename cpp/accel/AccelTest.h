@@ -8,14 +8,14 @@
 
 const unsigned N_LAYERS = 9;
 const unsigned L_CONV = 6;
-const unsigned S_tab[] =  { 32,  32,  16,  16,   8,   8,    4,    1,    1,   1};
-const unsigned M_tab[] =  {  3, 128, 128, 256, 256, 512, 8192, 1024, 1024};
-const unsigned N_tab[] =  {128, 128, 256, 256, 512, 512, 1024, 1024,   10};
-const unsigned T_tab[] =  {  0,   1,   1,   1,   1,   1,    2,    2,    3};
+const unsigned T_tab[] =  {  0,   1,   1,   1,   1,   1,    5,    2,    3};
+const unsigned S_tab[] =  { 32,  32,  16,  16,   8,   8,    4,    1,    1};
+const unsigned M_tab[] =  {  3, 128, 128, 256, 256, 512,  512, 8192,  128};
+const unsigned N_tab[] =  {128, 128, 256, 256, 512, 512,  512,  128,   10};
 const unsigned widx_tab[] = {0,   3,   6,   9,  12,  15,   18,   21,   24};
 const unsigned kidx_tab[] = {1,   4,   7,  10,  13,  16,   19,   22,   25};
 const unsigned hidx_tab[] = {2,   5,   8,  11,  14,  17,   20,   23,   26};
-const unsigned pool_tab[] = {0,   1,   0,   1,   0,   1,    0,    0,    0};
+const unsigned pool_tab[] = {0,   1  , 0,   1,   0,   1,    0,    0,    0};
 
 // layer_idx goes from 1 to 9
 bool layer_is_conv(unsigned layer_idx);
@@ -47,10 +47,12 @@ void set_bit_array(T1 array[], const T2* data, unsigned size) {
 void set_weight_array(Word* w, const float* wts, unsigned layer_idx);
 void set_conv_weight_array(Word* w, const float* wts, unsigned size);
 void set_dense_weight_array(Word* w, const float* wts, unsigned M, unsigned N);
+void set_conv1x1_weight_array(Word* w, const float* wts, unsigned M, unsigned N);
 
 void set_bnorm_array(Word* kh, const float* k, const float* h, unsigned layer_idx);
 void set_bnorm_array1(Word* kh, const float* k, const float* h, unsigned layer_idx, unsigned N);
 void set_bnorm_array2(Word* kh, const float* k, const float* h, unsigned N);
+void set_last_conv1x1_bnorm_array(Word* kh, const float* k, const float* h, unsigned N);
 
 void binarize_input_images(Word* dmem_i, const float* inputs, unsigned S);
 

@@ -1,11 +1,11 @@
 #ifndef ZIP_IO_H
 #define ZIP_IO_H
 
+#include <minizip/zip.h>
+#include <minizip/unzip.h>
 #include <cstdint>
 #include <cstdlib>
 #include <string>
-#include "../minizip/zip.h"
-#include "../minizip/unzip.h"
 
 //------------------------------------------------------------------------
 // Functions for reading a zip archive

@@ -3,13 +3,17 @@
 #=========================================================================
 set_directive_inline conv3x3b
 set_directive_inline encode_bit
-#set_directive_inline conv_word
+set_directive_inline conv_word
 set_directive_inline process_word
-#set_directive_inline bin_conv
-#set_directive_inline fp_conv
-#set_directive_inline bin_dense
+#set_directive_inline pop_count
+set_directive_inline bin_conv
+set_directive_inline fp_conv
+set_directive_inline bin_conv1x1
+set_directive_inline bin_dense
+#set_directive_inline -off loop_dense_map
+#set_directive_inline -off loop_dense_i
 
-set_directive_pipeline conv_word
+#set_directive_pipeline conv_word
 set_directive_pipeline top/LOOP_DMEM_I
 set_directive_pipeline top/LOOP_DMEM_O
 set_directive_pipeline top/LOOP_WT_I
@@ -35,17 +39,10 @@ set_directive_loop_tripcount -min 1 -max 16 bin_conv/LOOP_BATCH_NORM
 set_directive_pipeline bin_conv/LOOP_POOL_NORM
 set_directive_loop_tripcount -min 1 -max 16 bin_conv/LOOP_POOL_NORM
 
-# fp_conv/LOOP_FP_CONV_O
-set_directive_loop_tripcount -min 1 -max 32 fp_conv/LOOP_FP_CONV_O
-# fp_conv/LOOP_RESET_LINEBUFFERS
-set_directive_unroll fp_conv/LOOP_RESET_LINEBUFFERS
-set_directive_unroll -region fp_conv/LOOP_RESET_LINEBUFFERS
-# fp_conv/LOOP_LOAD_WTS
-set_directive_unroll fp_conv/LOOP_LOAD_WTS
-# fp_conv/LOOP_CONV_COLS
-set_directive_pipeline fp_conv/LOOP_CONV_COLS
-# fp_conv/LOOP_OUTPUT
-set_directive_pipeline fp_conv/LOOP_OUTPUT
+# bin_conv1x1/LOOP_DENSE_I
+set_directive_loop_tripcount -min 1 -max 256 bin_conv1x1/LOOP_CONV11_O
+set_directive_loop_tripcount -min 8 -max 16 bin_conv1x1/LOOP_CONV11_INIT_I
+set_directive_latency -max 1 pop_count
 
 # bin_dense/LOOP_DENSE_I
 set_directive_pipeline bin_dense/LOOP_DENSE_I
@@ -71,5 +68,7 @@ set_directive_array_partition fp_conv win       -dim 0 -type complete
 set_directive_array_partition fp_conv lbuf      -dim 0 -type complete
 set_directive_array_partition fp_conv outwords  -dim 0 -type complete
 set_directive_array_partition fp_conv wtbuf     -dim 0 -type complete
+set_directive_array_partition bin_conv1x1 wt_buffer -dim 0 -type complete
+set_directive_array_partition bin_conv1x1 dmem_buffer -dim 2 -type complete
 set_directive_array_partition bin_fc  sum_m     -dim 0 -type complete
 #=========================================================================

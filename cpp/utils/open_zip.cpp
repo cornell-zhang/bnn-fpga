@@ -7,7 +7,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "../minizip/unzip.h"
+#include <minizip/unzip.h>
 
 int main(int argc, char** argv) {
   if (argc < 2) {

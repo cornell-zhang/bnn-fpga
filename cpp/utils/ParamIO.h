@@ -7,7 +7,8 @@
 
 #include <cstdint>
 #include <string>
-#include "../minizip/unzip.h"
+#include <minizip/unzip.h>
+
 #include "Debug.h"
 
 /* Parameters are organized into arrays. A layer may have multiple arrays of

@@ -12,7 +12,7 @@ open_project hls.prj
 set_top $top
 
 add_files Accel.cpp -cflags $cflags
-add_files -tb accel_test_random.cpp -cflags $tbflags
+add_files -tb accel_test_bnn.cpp -cflags $tbflags
 add_files -tb AccelSchedule.cpp -cflags $cflags
 add_files -tb AccelTest.cpp -cflags $cflags
 add_files -tb AccelPrint.cpp -cflags $cflags
@@ -30,10 +30,10 @@ config_rtl -reset state
 # Apply optimizations
 source opt.tcl
 
-csim_design
+#csim_design
 
 csynth_design
-cosim_design -rtl verilog -trace_level all
+#cosim_design -rtl verilog -trace_level all
 
 #export_design -evaluate verilog
 

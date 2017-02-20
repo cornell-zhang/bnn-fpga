@@ -7,7 +7,7 @@ LDFLAGS:=-L../utils -lCraftUtils $(LDFLAGS)
 HDR=
 # OBJ must include a .cpp and .h with same name
 OBJ=Accel.o AccelSchedule.o AccelTest.o AccelPrint.o Dense.o InputConv.o
-EXE=accel_test_bnn.exe accel_test_layer.exe accel_test_random.exe
+EXE=accel_test_bnn.exe
 
 all: $(EXE)
 
