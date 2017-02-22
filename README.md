@@ -58,7 +58,9 @@ Branches
 ------------------------------------------------------------------------
 The master branch contains a debug build including a random testbench,
 a per-layer testbench, and a full bnn testbench. The optimized branch
-contains only the full testbench.
+contains only the full testbench. The conv1x1 branch implements a
+conv1x1 layer right after the last conv3x3 layer. It also conatins only
+the full testbench.
 
 FPGA Evaluation
 ------------------------------------------------------------------------
@@ -83,4 +85,9 @@ Varying the Number of Convolvers
 ------------------------------------------------------------------------
 Go to **cpp/accel/Accel.h** and change CONVOLVERS to the desired number
 (must be a power of 2). You must do a make clean and rebuild everything
-from scratch.
+from scratch. 
+
+Others
+------------------------------------------------------------------------
+The conv1x1 branch only supports 2 convolvers currently. To make sure the 
+codes work, every script neeed to be run from scratch.
