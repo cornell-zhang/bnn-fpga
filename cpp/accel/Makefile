@@ -1,7 +1,7 @@
 include ../Makefile.inc
 
 CFLAGS:=-I../utils $(CFLAGS)
-LDFLAGS:=-L../utils -lCraftUtils $(LDFLAGS)
+LDFLAGS:=-L../utils -L../minizip -lCraftUtils $(LDFLAGS)
 
 # HDR are pure headers
 HDR=

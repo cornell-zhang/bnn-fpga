@@ -42,7 +42,7 @@ This will set environment variables and download data and parameter zip files.
 
 To build the software model:
 ```
-  % cd cpp/accel
+  % cd cpp
   % make -j4
 ```
 
