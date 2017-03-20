@@ -84,3 +84,8 @@ Varying the Number of Convolvers
 Go to **cpp/accel/Accel.h** and change CONVOLVERS to the desired number
 (must be a power of 2). You must do a make clean and rebuild everything
 from scratch.
+
+Known Issues and Bugs
+------------------------------------------------------------------------
+1. SDSoC compilation error due to glibc include file (Issue #1) \
+This occurs if SDSoC sees the native version of glibc on CPATH, overriding the ARM version for cross-compilation. The fix is to remove /usr/include from CPATH. In some cases this prevents SDSoC from seeing zlib; currently the suggested fix is to build zlib in a different (non-system) directory and add that to CPATH.
