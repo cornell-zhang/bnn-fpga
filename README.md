@@ -32,6 +32,8 @@ Build Setup
 You will need Xilinx SDSoC on your PATH and the Vivado HLS
 header include files on your CPATH.
 
+Varified SDSoC versions: 2016.4, 2017.1
+
 With these tools in place do the following from the repository root:
 ```
   % source setup.sh
