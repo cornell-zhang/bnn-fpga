@@ -42,6 +42,11 @@ With these tools in place do the following from the repository root:
 ```
 This will set environment variables and download data and parameter zip files.
 
+If the get scripts do not work, please go to this [Google Drive][3] to download
+the files that need to go into the **data** and **params** folders.
+
+[3]: https://drive.google.com/drive/folders/1QC2PP209d7mh2aXUJ3j433Ij7aHBNP0I?usp=sharing
+
 To build the software model:
 ```
   % cd cpp
